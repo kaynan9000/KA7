@@ -1,139 +1,86 @@
--- [[ KA HUB V8.1 - CUSTOM EDITION (NO EXTERNAL LIB) ]]
+-- [[ KA HUB - VERSÃO COMPATIBILIDADE MÁXIMA ]]
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local RunService = game:GetService("RunService")
 local VIM = game:GetService("VirtualInputManager")
 local UIS = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
+local LP = Players.LocalPlayer
 
--- [[ VARIÁVEIS DE CONTROLE ]]
-local Clicking = false
-local AimbotEnabled = false
-local EspEnabled = false
-local ClickCount = 0
-local LastClickCount = 0
-local LastUpdate = tick()
-local FOV = 150
+-- Garantir que a GUI antiga seja apagada antes de iniciar
+if PlayerGui:FindFirstChild("KA_SIMPLE") then PlayerGui.KA_SIMPLE:Destroy() end
 
--- [[ CRIAÇÃO DA INTERFACE PRINCIPAL ]]
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KAHUB_V8"
+ScreenGui.Name = "KA_SIMPLE"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = PlayerGui
+ScreenGui.Parent = LP:WaitForChild("PlayerGui")
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 280, 0, 320)
-MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
+-- PAINEL PRINCIPAL (SIMPLES)
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.new(0, 200, 0, 220)
+Main.Position = UDim2.new(0, 50, 0, 50)
+Main.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+Main.Active = true
+Main.Draggable = true
 
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
-local Stroke = Instance.new("UIStroke", MainFrame)
-Stroke.Color = Color3.fromRGB(80, 150, 255)
-Stroke.Thickness = 2
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "KA HUB V8 - LIGHT"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
 
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Text = "KA HUB V8.1 - ULTIMATE"
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 18
-Title.BackgroundTransparency = 1
+-- VARIÁVEIS
+local Clicking = false
+local Aimbot = false
+local ESP = false
+local ClickCount = 0
 
--- [[ BOTÕES ESTILIZADOS ]]
-local function CreateToggleButton(name, pos, callback)
-    local btn = Instance.new("TextButton", MainFrame)
-    btn.Name = name
-    btn.Size = UDim2.new(0.9, 0, 0, 40)
-    btn.Position = pos
-    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-    btn.Text = name .. ": OFF"
-    btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+-- MIRA (SÓ UM PONTO VERMELHO NO MEIO PARA TESTE)
+local Mira = Instance.new("Frame", ScreenGui)
+Mira.Size = UDim2.new(0, 10, 0, 10)
+Mira.Position = UDim2.new(0.5, -5, 0.5, -5)
+Mira.BackgroundColor3 = Color3.new(1, 0, 0)
+Mira.Active = true
+Mira.Draggable = true -- VOCÊ PODE ARRASTAR A MIRA
+
+-- FUNÇÃO CRIAR BOTÃO
+local function CreateBtn(text, pos, callback)
+    local b = Instance.new("TextButton", Main)
+    b.Size = UDim2.new(0.9, 0, 0, 40)
+    b.Position = pos
+    b.Text = text .. ": OFF"
+    b.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+    b.TextColor3 = Color3.new(1,1,1)
     
-    local enabled = false
-    btn.MouseButton1Click:Connect(function()
-        enabled = not enabled
-        btn.Text = name .. ": " .. (enabled and "ON" or "OFF")
-        btn.BackgroundColor3 = enabled and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(45, 45, 60)
-        callback(enabled)
+    local state = false
+    b.MouseButton1Click:Connect(function()
+        state = not state
+        b.Text = text .. ": " .. (state and "ON" or "OFF")
+        b.BackgroundColor3 = state and Color3.new(0, 0.5, 0) or Color3.new(0.3, 0.3, 0.3)
+        callback(state)
     end)
-    return btn
 end
 
-local CPSLabel = Instance.new("TextLabel", MainFrame)
-CPSLabel.Size = UDim2.new(1, 0, 0, 30)
-CPSLabel.Position = UDim2.new(0, 0, 0, 45)
-CPSLabel.Text = "CPS: 0"
-CPSLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
-CPSLabel.BackgroundTransparency = 1
-CPSLabel.Font = Enum.Font.GothamBold
+-- BOTÕES
+CreateBtn("AUTO CLICK", UDim2.new(0.05, 0, 0, 40), function(v) Clicking = v end)
+CreateBtn("AIMBOT", UDim2.new(0.05, 0, 0, 90), function(v) Aimbot = v end)
+CreateBtn("ESP", UDim2.new(0.05, 0, 0, 140), function(v) ESP = v end)
 
-CreateToggleButton("Auto Clicker (V8)", UDim2.new(0.05, 0, 0, 80), function(v) Clicking = v end)
-CreateToggleButton("Aimbot (Lock Head)", UDim2.new(0.05, 0, 0, 130), function(v) AimbotEnabled = v end)
-CreateToggleButton("ESP (Highlights)", UDim2.new(0.05, 0, 0, 180), function(v) EspEnabled = v end)
-
-local Close = Instance.new("TextButton", MainFrame)
-Close.Size = UDim2.new(0.9, 0, 0, 30)
-Close.Position = UDim2.new(0.05, 0, 0, 270)
-Close.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-Close.Text = "FECHAR SCRIPT"
-Close.TextColor3 = Color3.new(1, 1, 1)
-Instance.new("UICorner", Close).CornerRadius = UDim.new(0, 8)
-Close.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
-
--- [[ MIRA FLUTUANTE ARRASTÁVEL ]]
-local CursorHitbox = Instance.new("Frame", ScreenGui)
-CursorHitbox.Size = UDim2.new(0, 60, 0, 60)
-CursorHitbox.Position = UDim2.new(0.5, -30, 0.5, -30)
-CursorHitbox.BackgroundTransparency = 1
-CursorHitbox.Active = true
-CursorHitbox.Draggable = true
-
-local Cross1 = Instance.new("Frame", CursorHitbox)
-Cross1.Size = UDim2.new(1, 0, 0, 2)
-Cross1.Position = UDim2.new(0, 0, 0.5, -1)
-Cross1.BackgroundColor3 = Color3.new(1, 1, 1)
-
-local Cross2 = Instance.new("Frame", CursorHitbox)
-Cross2.Size = UDim2.new(0, 2, 1, 0)
-Cross2.Position = UDim2.new(0.5, -1, 0, 0)
-Cross2.BackgroundColor3 = Color3.new(1, 1, 1)
-
--- [[ LÓGICA CORE ]]
-
--- High Speed Clicker
+-- LÓGICA DE CLIQUE (HEARTBEAT - ULTRA RÁPIDO)
 RunService.Heartbeat:Connect(function()
     if Clicking then
-        local pos = CursorHitbox.AbsolutePosition + CursorHitbox.AbsoluteSize/2
+        local pos = Mira.AbsolutePosition + (Mira.AbsoluteSize / 2)
         VIM:SendMouseButtonEvent(pos.X, pos.Y, 0, true, game, 0)
         VIM:SendMouseButtonEvent(pos.X, pos.Y, 0, false, game, 0)
-        ClickCount = ClickCount + 1
     end
 end)
 
--- Aimbot & ESP Loop
+-- LÓGICA AIMBOT & ESP
 RunService.RenderStepped:Connect(function()
-    -- Atualiza CPS
-    if tick() - LastUpdate >= 1 then
-        CPSLabel.Text = "CPS: " .. (ClickCount - LastClickCount)
-        LastClickCount = ClickCount
-        LastUpdate = tick()
-    end
-
-    -- Aimbot
-    if AimbotEnabled then
+    if Aimbot then
         local target = nil
-        local dist = FOV
+        local dist = 200
         for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+            if p ~= LP and p.Character and p.Character:FindFirstChild("Head") then
                 local pos, onScreen = Camera:WorldToViewportPoint(p.Character.Head.Position)
                 if onScreen then
                     local mag = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
@@ -149,21 +96,20 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- ESP
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character then
-            local highlight = p.Character:FindFirstChild("KA_ESP")
-            if EspEnabled then
-                if not highlight then
-                    highlight = Instance.new("Highlight", p.Character)
-                    highlight.Name = "KA_ESP"
-                    highlight.FillColor = Color3.new(1, 0, 0)
+    if ESP then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LP and p.Character then
+                if not p.Character:FindFirstChild("Highlight") then
+                    local h = Instance.new("Highlight", p.Character)
+                    h.FillColor = Color3.new(1, 0, 0)
                 end
-            elseif highlight then
-                highlight:Destroy()
+            end
+        end
+    else
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Character and p.Character:FindFirstChild("Highlight") then
+                p.Character.Highlight:Destroy()
             end
         end
     end
 end)
-
-print("KA HUB CARREGADO COM SUCESSO!")
